@@ -35,8 +35,49 @@ export class ConsentTransport extends BaseTransport {
       this.lastResult = false;
       return Promise.resolve();
     }
+    // Cloud requires a session in both the envelope and request header.
+    // Reuse JourneyGap's consent-scoped ID; never create another identity.
+    const sessions = new Set<string>();
+    for (const item of items) {
+      const traces = item.payload as {
+        resourceSpans?: Array<{
+          scopeSpans?: Array<{
+            spans?: Array<{
+              attributes?: Array<{
+                key?: string;
+                value?: { stringValue?: string };
+              }>;
+            }>;
+          }>;
+        }>;
+      };
+      for (const resource of traces.resourceSpans ?? [])
+        for (const scope of resource.scopeSpans ?? [])
+          for (const span of scope.spans ?? []) {
+            const id = span.attributes?.find(
+              (attribute) => attribute.key === "journeygap.session_id",
+            )?.value?.stringValue;
+            if (
+              !id ||
+              !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+                id,
+              )
+            ) {
+              this.lastResult = false;
+              return Promise.resolve();
+            }
+            sessions.add(id);
+          }
+    }
+    if (sessions.size !== 1) {
+      this.lastResult = false;
+      return Promise.resolve();
+    }
+    const sessionId = [...sessions][0];
+    if (!sessionId) return Promise.resolve();
     const meta: Meta = {
       app: { ...this.app },
+      session: { id: sessionId },
       sdk: { name: "journeygap-grafana", version: this.version },
     };
     const body = getTransportBody(items.map((item) => ({ ...item, meta })));
@@ -45,7 +86,7 @@ export class ConsentTransport extends BaseTransport {
       this.lastResult = false;
       return Promise.resolve();
     }
-    const request = this.deliver(text)
+    const request = this.deliver(text, sessionId)
       .catch(() => false)
       .then((ok) => {
         this.lastResult = ok;
@@ -67,7 +108,7 @@ export class ConsentTransport extends BaseTransport {
     this.controller.abort();
   }
 
-  private async deliver(body: string): Promise<boolean> {
+  private async deliver(body: string, sessionId: string): Promise<boolean> {
     const controller = new AbortController();
     const abort = () => controller.abort();
     this.controller.signal.addEventListener("abort", abort, { once: true });
@@ -86,6 +127,7 @@ export class ConsentTransport extends BaseTransport {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
+              "x-faro-session-id": sessionId,
               "Idempotency-Key": key,
             },
             body,
@@ -96,7 +138,8 @@ export class ConsentTransport extends BaseTransport {
             keepalive: false,
           });
           await response.body?.cancel();
-          if (response.ok) return true;
+          if (response.ok)
+            return response.headers.get("X-Faro-Session-Status") !== "invalid";
           if (![429, 502, 503, 504].includes(response.status)) return false;
           const retry = response.headers.get("Retry-After");
           if (retry !== null) {

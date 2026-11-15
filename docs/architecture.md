@@ -21,7 +21,8 @@ independent resources. Old callbacks cannot mark the new epoch as delivered.
 Faro core is initialized with empty instrumentations/metas, isolated globals,
 disabled batching and disabled Faro session tracking. The transport constructs
 fixed app/SDK metadata instead of inheriting browser, user, page, source-map or
-session metadata. JourneyGap IDs stay inside the spans; no second session identity
+session metadata. The existing JourneyGap session ID is also copied into meta.session.id
+and x-faro-session-id, as required by the managed collector; no second session identity
 is generated. A standard Faro exporter callback acknowledges API handoff before
 HTTP; the adapter defers its callback until the matching transport work settles.
 

@@ -100,7 +100,7 @@ is never adopted. Await `shutdown()` before deliberately creating a new instance
 The distribution does not initialize global OpenTelemetry providers or expose a
 Faro global. It works alongside an unrelated Faro instance. It disables automatic
 RUM, replay, console, network/error instrumentation, browser/OS/page metadata, and
-Faro session tracking. Only JourneyGap's defined spans and fixed app/SDK metadata
+Faro session tracking. Only JourneyGap's defined spans, fixed app/SDK metadata and the same JourneyGap session ID
 are passed to the collector. Custom attributes still pass JourneyGap's privacy
 filter. Session/attempt IDs are pseudonymous, not a guarantee of anonymity.
 

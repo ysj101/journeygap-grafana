@@ -37,7 +37,7 @@ test.beforeEach(async () => {
     res.setHeader("Access-Control-Allow-Origin", "http://127.0.0.1:5189");
     res.setHeader(
       "Access-Control-Allow-Headers",
-      "content-type,idempotency-key",
+      "content-type,idempotency-key,x-faro-session-id",
     );
     res.setHeader("Access-Control-Allow-Methods", "POST,OPTIONS");
     if (req.method === "OPTIONS") {
@@ -88,10 +88,15 @@ test("real JourneyGap → official Faro exporter/envelope preserves analysis and
   expect(Object.keys(envelope).sort()).toEqual(["meta", "traces"]);
   expect(envelope.meta).toEqual({
     app: { name: "example-a" },
+    session: { id: expect.any(String) },
     sdk: { name: "journeygap-grafana", version: "0.1.0" },
   });
   const parsed = parseOtlpJson(JSON.stringify(envelope.traces), relay);
   expect(parsed.journeyEvents).toHaveLength(2);
+  expect(envelope.meta.session.id).toBe(parsed.journeyEvents[0]!.sessionId);
+  expect(payloads[0]!.headers["x-faro-session-id"]).toBe(
+    envelope.meta.session.id,
+  );
   const report = analyze(parsed.journeyEvents, journeys[0]!, Date.now());
   expect(report.observedStarts).toBe(1);
   expect(report.observedCompletions).toBe(1);

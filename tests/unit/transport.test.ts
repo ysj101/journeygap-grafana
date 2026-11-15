@@ -4,7 +4,28 @@ import { ConsentTransport } from "../../src/transport.js";
 
 const item = {
   type: TransportItemType.TRACE,
-  payload: { resourceSpans: [] },
+  payload: {
+    resourceSpans: [
+      {
+        scopeSpans: [
+          {
+            spans: [
+              {
+                attributes: [
+                  {
+                    key: "journeygap.session_id",
+                    value: {
+                      stringValue: "11111111-1111-4111-8111-111111111111",
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
   meta: {
     user: { id: "PRIVATE-USER" },
     page: { url: "https://private.example/?secret=value" },
@@ -30,6 +51,7 @@ it("caps failed delivery at three attempts and strips caller metadata", async ()
   );
   expect(body.meta).toEqual({
     app: { name: "test-product" },
+    session: { id: "11111111-1111-4111-8111-111111111111" },
     sdk: { name: "journeygap-grafana", version: "0.1.0" },
   });
   const calls = fetch.mock.calls as unknown as [string, RequestInit][];
@@ -100,5 +122,31 @@ it("aborts an unresponsive fetch at the batch deadline", async () => {
   await sending;
   expect(aborted).toBe(true);
   expect(await transport.flush()).toBe(false);
+  transport.discard();
+});
+
+it("rejects missing session IDs and Cloud session-invalid acknowledgements", async () => {
+  const fetch = vi.fn(
+    async () =>
+      new Response(null, {
+        status: 202,
+        headers: { "X-Faro-Session-Status": "invalid" },
+      }),
+  );
+  vi.stubGlobal("fetch", fetch);
+  const transport = new ConsentTransport(
+    "https://collector.example/collect/key",
+    { name: "test-product" },
+  );
+  await transport.send({ ...item, payload: { resourceSpans: [] } });
+  expect(fetch).not.toHaveBeenCalled();
+  await transport.send(item);
+  expect(await transport.flush()).toBe(false);
+  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(
+    (fetch.mock.calls as unknown as [string, RequestInit][])[0]![1].headers,
+  ).toMatchObject({
+    "x-faro-session-id": "11111111-1111-4111-8111-111111111111",
+  });
   transport.discard();
 });
