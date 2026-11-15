@@ -9,8 +9,7 @@ License: Apache-2.0 (LICENSE here and inside both archives).
 
 These are the unmodified `pnpm pack` outputs after installing the source lockfile
 and building on Node 26.12.1 / pnpm 10.30.2. The source commit adds the endpoint-free
-custom SpanExporter API used by this distribution. It is under review, not merged
-or published. The packages remain at their unpublished upstream version 0.1.0.
+custom SpanExporter API used by this distribution. It was merged in upstream PR #42; it is not published. The packages remain at their unpublished upstream version 0.1.0.
 
 Run `sh scripts/repack-vendor.sh` with pnpm 10.30.2 to regenerate the archives.
 Run `npm install --ignore-scripts ./vendor/journeygap-core-0.1.0.tgz
