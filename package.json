@@ -1,0 +1,65 @@
+{
+  "name": "journeygap-grafana",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Consent-gated JourneyGap browser distribution for Grafana Faro",
+  "type": "module",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ysj101/journeygap-grafana.git"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./analysis": {
+      "types": "./dist/analysis.d.ts",
+      "import": "./dist/analysis.js"
+    }
+  },
+  "files": [
+    "dist",
+    "vendor",
+    "LICENSE",
+    "README.md"
+  ],
+  "bundledDependencies": [
+    "@journeygap/core",
+    "@journeygap/web"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "biome check .",
+    "test": "vitest run",
+    "test:browser": "playwright test",
+    "test:package": "node scripts/package-smoke.mjs",
+    "check": "npm run verify:vendor && npm run lint && npm run typecheck && npm run build && npm test && npm run test:package",
+    "verify:vendor": "node scripts/verify-vendor.mjs"
+  },
+  "dependencies": {
+    "@grafana/faro-core": "2.14.0",
+    "@grafana/faro-web-sdk": "2.14.0",
+    "@grafana/faro-web-tracing": "2.14.0",
+    "@journeygap/core": "file:vendor/journeygap-core-0.1.0.tgz",
+    "@journeygap/web": "file:vendor/journeygap-web-0.1.0.tgz",
+    "@opentelemetry/sdk-trace": "2.11.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.6",
+    "@playwright/test": "1.65.1",
+    "@types/node": "24.10.1",
+    "typescript": "5.9.3",
+    "vite": "8.3.8",
+    "vitest": "5.1.0"
+  },
+  "bundleDependencies": [
+    "@journeygap/core",
+    "@journeygap/web"
+  ]
+}
