@@ -44,7 +44,7 @@ HTTP receiver acceptance is not proof of durable Grafana Cloud ingestion.
 3. Real JourneyGap steps pass through official FaroTraceExporter and getTransportBody,
    then parse through JourneyGap core and produce one start, one completion and no
    order anomalies. No mock replaces those SDKs.
-4. Payload metadata contains only fixed app/SDK fields. Private input, raw page
+4. Payload metadata contains fixed app/SDK fields and JourneyGap's existing session ID. Private input, raw page
    queries, user/browser/OS metadata, authorization and cookies are absent. Product A
    and product B keep distinct service names without product-specific SDK code.
 5. Withdrawal drops a pending span queue, actively cancels a held HTTP request,
@@ -60,7 +60,7 @@ HTTP receiver acceptance is not proof of durable Grafana Cloud ingestion.
 
 ## Material limits
 
-- Live managed Faro acceptance, Cloud-side metadata enrichment, storage/sampling,
+- Cloud-side metadata enrichment, storage/sampling,
   actual origin policy and account quotas remain deployment work. See
   https://github.com/ysj101/URAMEKU/issues/205.
 - The exact upstream API is supplied as bundled, licensed archives while PR #42 is
@@ -72,3 +72,20 @@ HTTP receiver acceptance is not proof of durable Grafana Cloud ingestion.
 - The optional analysis entry is not a Grafana query client. Complete retrieval,
   response normalization, sampling awareness and credential handling must happen
   in administrator tooling before claiming a complete journey report.
+
+## Managed Cloud connection (2026-11-16 JST)
+
+The managed receiver rejected the original session-free envelope with HTTP 400.
+The corrected browser SDK received HTTP 202 from the Tokyo Faro collector with
+Origin `https://ysj101.github.io`, using an intercepted local test page under that
+origin (no production deployment was changed for this probe). Tempo lookup of
+trace `e03eef0cb73d507c715f27dd5a2c2532` confirmed the synthetic `connection`
+journey completion and retained JourneyGap session/instance/event/step attributes.
+Only synthetic events were sent. The Cloud app is `urameku` (id 613).
+
+The protocol reuses JourneyGap's ID in `meta.session.id` and the
+`x-faro-session-id` request header. Missing/mixed session IDs are rejected before
+network access. HTTP 202 with `X-Faro-Session-Status: invalid` counts as failed
+delivery, not success. Automatic Faro session renewal remains disabled: a stale
+Cloud session can lose observations until a fresh JourneyGap consent session is
+created. This remains best-effort telemetry, never a reliable count of all users.
